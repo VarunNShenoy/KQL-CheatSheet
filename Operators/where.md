@@ -1,6 +1,6 @@
 # where Operator
 
-The `where` operator n Kusto Query Language (KQL) is used to filter rows from a table or dataset based on a specified predicate (condition), returning only those rows where the expression evaluates to true.
+The `where` operator in Kusto Query Language (KQL) is used to filter rows from a table or dataset based on a specified predicate (condition), returning only those rows where the expression evaluates to `true`.
 
 ## Syntax
 
@@ -15,24 +15,24 @@ TableName
 
 | Parameter | Description |
 |-----------|-------------|
-| condition | Expression that evaluates to true or false |
+| Condition | Expression that evaluates to true or false |
 
------
+---
 
 ## Basic Example
 
 ```kql
 SigninLogs
-| where Resulttype == 0
+| where ResultType == 0
 ```
 
 ### Output
 
-Returns only successful sign-in events 
+Returns only successful sign-in events.
 
 ---
 
-## Common use Cases
+## Common Use Cases
 
 ### Filter Successful Logins
 
@@ -70,7 +70,7 @@ SigninLogs
 | where Country == "India"
 ```
 
-or
+Or:
 
 ```kql
 SigninLogs
@@ -81,8 +81,10 @@ SigninLogs
 
 ## Performance Tips
 
-✅ Filter as early as possible in the query.
-❌ Avoid filtering after expensive operations.
+- ✅ Filter as early as possible in the query.
+- ❌ Avoid filtering after expensive operations.
+
+---
 
 ## Real-World Threat Hunting Examples
 
@@ -91,8 +93,7 @@ SigninLogs
 ```kql
 SigninLogs
 | where ResultType != 0
-| summarize FailedAttempts=count()
-    by UserPrincipalName
+| summarize FailedAttempts = count() by UserPrincipalName
 ```
 
 ### Sign-ins from a Specific Country
@@ -108,6 +109,7 @@ SigninLogs
 SigninLogs
 | where IPAddress == "185.220.101.1"
 ```
+
 ---
 
 ## Microsoft Documentation
