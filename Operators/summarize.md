@@ -1,4 +1,4 @@
-# where Operator
+# Summarize Operator
 
 The `Summarize` operator produces a table that aggregrates the content of the inmput table 
 
@@ -112,22 +112,28 @@ SigninLogs
 | sort by UniqueIPs desc
 ```
 
-### Sign-ins from a Specific Country
+### Password Spray Detection
 
 ```kql
 SigninLogs
-| where Location contains "Russia"
+| where ResultType != 0
+| summarize UniqueUsers = dcount(UserPrincipalName) by IPAddress
+| where UniqueUsers > 10
+| sort by UniqueUsers desc
 ```
 
-### Suspicious IP Activity
+### Rare Parent-child Process Relationship
 
 ```kql
-SigninLogs
-| where IPAddress == "185.220.101.1"
+DeviceProcessEvents
+| where DeviceName == "X"
+| summarize ExecutionCount = count()
+    by InitiatingProcessFileName, FileName
+| where ExecutionCount < 5
 ```
 
 ---
 
 ## Microsoft Documentation
 
-https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query/where-operator
+https://learn.microsoft.com/en-us/kusto/query/summarize-operator?view=microsoft-fabric
