@@ -1,4 +1,4 @@
-# Extend Operator
+# Extendclea Operator
 
 The `extend` Operator creates calculated columns and append them to the result set.
 
