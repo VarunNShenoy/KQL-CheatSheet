@@ -141,7 +141,7 @@ SigninLogs
 
 ```kql
 SigninLogs
-| where IPAddress == "<SUSPICIOUS_IP>
+| where IPAddress == "<SUSPICIOUS_IP>"
 | where UserPrincipalName == "<TARGETED_USER>"
 | project TimeGenerated,
           UserPrincipalName,
@@ -152,4 +152,28 @@ SigninLogs
           ResultType,
 | order by TimeGenerated desc
 ```
+
+#### What to look for
+
+- Countries the user has never authenticated from.
+- Locations inconsistent with the user's normal activity.
+- Multiple countries within a short timeframe.
+
+### What browsers and Operating Systems were used
+
+```kql
+SigninLogs
+| where IPAddress == "<SUSPICIOUS_IP>"
+| summarize Attempts = count()
+     by
+     Browser = tostring(DeviceDetail.browser),
+     OperatingSystem = tostring(DeviceDetail.operatingSystem)
+| order by Attempts desc
+```
+
+#### What to look for
+
+- Raare browsers
+- Unexpected operating systems
+
 
