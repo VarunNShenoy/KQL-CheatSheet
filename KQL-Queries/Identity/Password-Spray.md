@@ -2,9 +2,11 @@
 
 ## Objective 
 
-Detect IP Address attempting to authneticate to multiple user accounts with failed sign-in's within the short period. Password spraying is commonly used to compromise accounts. Password spraying is a "low-and-slow" brute force attack where threat actors attempt to access multiple user accounts using a small set of common or default passwords (e.g., "Password123!", "Welcome1") rather than targeting a single account with many guesses.
+Investigate a suspected password spray attack by identifying the targeted accounts, validating whether any authentication attempts were successful, assessing the affected devices and applications, and determining whether the activity resulted in account compromise.
+ 
+ Password spraying is commonly used to compromise accounts. Password spraying is a "low-and-slow" brute force attack where threat actors attempt to access multiple user accounts using a small set of common or default passwords (e.g., "Password123!", "Welcome1") rather than targeting a single account with many guesses.
 
-## Table User 
+## Table Used / Data Source 
 
 - SigninLogs
 
@@ -20,9 +22,9 @@ Detect IP Address attempting to authneticate to multiple user accounts with fail
 - Review Conditional Access and MFA results to determine whether access was blocked, challenged, or successfully granted.
 - If a successful authentication occurred, pivot to the user's subsequent activities (endpoint, email, cloud, and audit logs) to identify any malicious actions performed after login.
 
-## Investigation Querries 
+## Investigation Queries 
 
-### Which users were targeted?
+### Which users were targeted? 
 
 ```kql
 SigninLogs
@@ -46,7 +48,7 @@ SigninLogs
 ```kql
 SigninLogs
 | where IPAddress == "<SUSPICIOUS_IP>"
-| where UserPrincipalName == "<TARGETTED_USER>"
+| where UserPrincipalName == "<TARGETED_USER>"
 | where ResultType == 0
 | project
     TimeGenerated,
@@ -107,8 +109,47 @@ SigninLogs
 ```
 
 #### what to look for
+
 - Exchange Online
 - SharePoint Online
 - Microsoft Teams
 - Azure Portal
 - Custom enterprise applications
+
+
+### Was Conditional Access applied?
+
+```kql
+SigninLogs
+| where IPAddress == "<SUSPICIOUS_IP>"
+| where UserPrincipalName == "TARGETED_USER>"
+| project TimeGenerated,
+          UserPrincipalName,
+          ConditionalAccessStatus,
+          ConditionalAccessPolicies,
+          ResultType
+| order by TimeGenerated desc
+```
+
+#### What to look for
+
+- Was access allowed or blocked?
+- Which Conditional Access policies were evaluated?
+- Were policies applied Successfully?
+
+### Was the sign-in from an unusual location?
+
+```kql
+SigninLogs
+| where IPAddress == "<SUSPICIOUS_IP>
+| where UserPrincipalName == "<TARGETED_USER>"
+| project TimeGenerated,
+          UserPrincipalName,
+          Country = tostring(LocationDetails.countryOrRegion),
+          State = tostring(LocationDetails.state)
+          City = tostring(LocationDetails.city)
+          IPAddress,
+          ResultType,
+| order by TimeGenerated desc
+```
+
