@@ -28,7 +28,8 @@ DeviceNetworkEvents
 ```kql
 DeviceProcessEvents
 | where DeviceName == "<DEVICE_NAME>"
-| where FileName =~ "<SUSPICIOUS_PROCESS>"
+| where InitiatingProcessFileName =~ "<SUSPICIOUS_PROCESS>"
+    or FileName =~ "<SUSPICIOUS_PROCESS>"
 | where Timestamp between (
     datetime(<START_TIME>) .. datetime(<END_TIME>) // END_TIME can be 30 mins from START_TIME
 )
