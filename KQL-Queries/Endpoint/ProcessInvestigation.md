@@ -162,3 +162,72 @@ DeviceNetworkEvents
 - Unexpected network activity from processes that normally shouldn't communicate externally.
 - HTTP/HTTPS connections associated with suspicious command execution.
 - Network activity occurring immediately after a suspicious process was launched.
+
+### Identify file activity associated with a suspicious process
+
+```kql
+DeviceFileEvents
+| where DeviceName == "<DEVICE_NAME>"
+| where Timestamp between (
+    datetime(<START_TIME>) .. datetime(<END_TIME>)
+)
+| where InitiatingProcessFileName =~ "<SUSPICIOUS_PROCESS>"
+| project
+    Timestamp,
+    DeviceName,
+    ActionType,
+    FileName,
+    FolderPath,
+    SHA256,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    InitiatingProcessId,
+    AccountName
+| order by Timestamp asc
+```
+
+#### What to look for
+
+- Files created or modified by the suspicious process.
+- Executables, scripts, or DLLs written to disk.
+- Files created in unusual directories such as temporary or user-writable locations.
+- Suspicious file extensions.
+- Files with a SHA256 hash that can be investigated further.
+- The process creating a file and subsequently executing it.
+- File activity occurring immediately before or after suspicious network activity.
+
+#### Note
+
+Keep the same <START_TIME> / <END_TIME> window you used for the process investigation so your pivots stay within the same incident timeline.
+
+if confirmed that the file is malicious, then we can pivot to check file persistance within the environment.
+
+## Identify other devices with the same file hash
+
+```kql
+DeviceFileEvents
+| where SHA256 == "<SUSPICIOUS_SHA256>"
+| project
+    Timestamp,
+    DeviceName,
+    ActionType,
+    FileName,
+    FolderPath,
+    SHA256,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    AccountName
+| order by Timestamp asc
+```
+
+#### What to look for
+
+- Whether the same hash appeared on multiple devices.
+- Whether the file was created, modified, or executed.
+- Different file paths associated with the same hash.
+- Different users interacting with the file.
+- Whether the file appeared on other devices before or after the original incident.
+- Whether the same suspicious process was responsible for creating or executing it.
+
+
+
