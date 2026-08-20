@@ -139,3 +139,284 @@ If you identify a suspicious connection, pivot using RemoteIP, RemoteUrl, Initia
 
 
 ### Identify Files Created or Modified by PowerShell
+
+```kql
+DeviceFileEvents
+| where DeviceName == "<DEVICE_NAME>"
+| where Timestamp between (
+    datetime(<START_TIME>) .. datetime(<END_TIME>)
+)
+| where InitiatingProcessFileName =~ "powershell.exe"
+    or InitiatingProcessFileName =~ "pwsh.exe"
+| project
+    Timestamp,
+    DeviceName,
+    ActionType,
+    FileName,
+    FolderPath,
+    SHA256,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    InitiatingProcessId,
+    AccountName
+| order by Timestamp asc
+```
+
+#### What to look for
+
+- Executables or scripts created shortly after PowerShell execution.
+- Files written to unusual locations such as temporary or user-writable directories.
+- .ps1, .bat, .cmd, .vbs, .js, .dll, or executable files created by PowerShell.
+- Files with suspicious or randomized names.
+- Files associated with known malicious hashes.
+- PowerShell creating a file and subsequently executing it.
+- File creation followed by network activity.
+- Files written into locations commonly associated with persistence.
+- Unexpected file modifications under system or security-related directories.
+
+### Identify Child process spawned by PowerShell
+
+```kql
+DeviceProcessEvents
+| where DeviceName == "<DEVICE_NAME>"
+| where Timestamp between (
+    datetime(<START_TIME>) .. datetime(<END_TIME>)
+)
+| where InitiatingProcessFileName =~ "powershell.exe"
+ or InitiatingProcessFileName =~ "pwsh.exe"
+| project 
+  TimeStamp, 
+  DeviceName,
+  AccountName,
+  FileName,
+  ProcessId,
+  ProcessCommandLine,
+  InitiatingProcessFileName,
+  InitiatingProcessCommandLine,
+  InitiatingProcessId
+| order by Timestamp asc
+```
+
+#### What to look for
+- PowerShell spawning cmd.exe.
+- PowerShell spawning rundll32.exe, regsvr32.exe, mshta.exe, or other LOLBins.
+- PowerShell launching executable files from unusual directories.
+- PowerShell spawning scripting interpreters such as wscript.exe or cscript.exe.
+- PowerShell launching discovery commands such as whoami, ipconfig, net, or systeminfo.
+- PowerShell spawning processes that establish persistence or modify security settings.
+- Child processes executing shortly after an encoded or obfuscated PowerShell command.
+- Unexpected child processes that are inconsistent with the user's administrative activity.
+
+
+### Powershell Security Control Modification
+
+```kql
+DeviceEvents
+| where DeviceName == "<DEVICE_NAME>"
+| where Timestamp between (
+    datetime(<START_TIME>) .. datetime(<END_TIME>)
+)
+| where AdditionalFields has_any (
+    "Defender",
+    "Antivirus",
+    "DisableRealtimeMonitoring",
+    "ExclusionPath",
+    "ExclusionProcess",
+    "ExclusionExtension"
+)
+    or ProcessCommandLine has_any (
+        "Set-MpPreference",
+        "Add-MpPreference",
+        "Remove-MpPreference",
+        "DisableRealtimeMonitoring",
+        "ExclusionPath",
+        "ExclusionProcess",
+        "ExclusionExtension"
+    )
+| project
+    Timestamp,
+    DeviceName,
+    ActionType,
+    AccountName,
+    ProcessCommandLine,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    AdditionalFields
+| order by Timestamp asc
+```
+
+#### What to look for
+
+Pay particular attention to PowerShell commands involving:
+
+- Set-MpPreference
+- Add-MpPreference
+- Remove-MpPreference
+- DisableRealtimeMonitoring
+- ExclusionPath
+- ExclusionProcess
+- ExclusionExtension
+- Changes to Defender scanning or protection settings
+- Security exclusions pointing to suspicious directories
+- Changes performed by an unexpected user
+- Changes immediately following encoded/obfuscated PowerShell
+- Security-control changes followed by file creation or network activity
+
+
+### Persistance set using Powershell
+
+```kql
+DeviceEvents
+| where DeviceName == "<DEVICE_NAME>"
+| where Timestamp between (
+    datetime(<START_TIME>) .. datetime(<END_TIME>)
+)
+| where InitiatingProcessFileName =~ "powershell.exe"
+    or InitiatingProcessFileName =~ "pwsh.exe"
+| where ActionType has_any (
+    "RegistryValueSet",
+    "ScheduledTaskCreated",
+    "ServiceInstalled",
+    "FileCreated"
+)
+| project
+    Timestamp,
+    DeviceName,
+    ActionType,
+    AccountName,
+    FileName,
+    FolderPath,
+    ProcessCommandLine,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    InitiatingProcessId,
+    RegistryKey,
+    RegistryValueName,
+    RegistryValueData,
+    AdditionalFields
+| order by Timestamp asc
+```
+
+#### What to look for
+
+- PowerShell creating or modifying Run/RunOnce registry entries.
+- Scheduled tasks created immediately after PowerShell execution.
+- New services created through PowerShell.
+- Executables or scripts placed in Startup directories.
+- Persistence pointing to unusual user-writable locations such as %TEMP% or %APPDATA%.
+- Registry values containing PowerShell commands or encoded commands.
+- Persistence mechanisms referencing .ps1, .vbs, .js, .dll, or suspicious executables.
+- Persistence established shortly after suspicious PowerShell or Defender-modification activity.
+- Persistence created by an unexpected user or process.
+
+#### Note
+
+Don't classify a scheduled task or registry modification as malicious by itself. Context, command line, account, timing, target path, and subsequent execution are what make the finding suspicious.
+
+
+### Attempt to build powershell Execution Timeline
+
+```kql
+union
+(
+    DeviceProcessEvents
+    | where DeviceName == "<DEVICE_NAME>"
+    | where Timestamp between (
+        datetime(<START_TIME>) .. datetime(<END_TIME>)
+    )
+    | where FileName =~ "powershell.exe"
+        or FileName =~ "pwsh.exe"
+        or InitiatingProcessFileName =~ "powershell.exe"
+        or InitiatingProcessFileName =~ "pwsh.exe"
+    | project
+        Timestamp,
+        DeviceName,
+        EventType = "Process",
+        ActionType,
+        AccountName,
+        FileName,
+        ProcessId,
+        ProcessCommandLine,
+        InitiatingProcessFileName,
+        InitiatingProcessCommandLine,
+        InitiatingProcessId,
+        RemoteIP = "",
+        RemoteUrl = "",
+        RemotePort = int(null),
+        FolderPath = ""
+),
+(
+    DeviceFileEvents
+    | where DeviceName == "<DEVICE_NAME>"
+    | where Timestamp between (
+        datetime(<START_TIME>) .. datetime(<END_TIME>)
+    )
+    | where InitiatingProcessFileName =~ "powershell.exe"
+        or InitiatingProcessFileName =~ "pwsh.exe"
+    | project
+        Timestamp,
+        DeviceName,
+        EventType = "File",
+        ActionType,
+        AccountName,
+        FileName,
+        ProcessId = int(null),
+        ProcessCommandLine = "",
+        InitiatingProcessFileName,
+        InitiatingProcessCommandLine,
+        InitiatingProcessId,
+        RemoteIP = "",
+        RemoteUrl = "",
+        RemotePort = int(null),
+        FolderPath
+),
+(
+    DeviceNetworkEvents
+    | where DeviceName == "<DEVICE_NAME>"
+    | where Timestamp between (
+        datetime(<START_TIME>) .. datetime(<END_TIME>)
+    )
+    | where InitiatingProcessFileName =~ "powershell.exe"
+        or InitiatingProcessFileName =~ "pwsh.exe"
+    | project
+        Timestamp,
+        DeviceName,
+        EventType = "Network",
+        ActionType,
+        AccountName = "",
+        FileName = "",
+        ProcessId = int(null),
+        ProcessCommandLine = "",
+        InitiatingProcessFileName,
+        InitiatingProcessCommandLine,
+        InitiatingProcessId,
+        RemoteIP,
+        RemoteUrl,
+        RemotePort,
+        FolderPath = ""
+)
+| order by Timestamp asc
+```
+
+###### Need to verify yet
+
+After getting all these determine whether the PowerShell activity is legitimate administrative activity or potentially malicious.
+
+
+Determine whether the observed PowerShell activity is:
+
+- Legitimate administrative activity
+- Suspicious but inconclusive
+- Confirmed malicious
+
+Support the conclusion using:
+
+- Command line
+- User/account
+- Parent process
+- Child processes
+- File activity
+- Network activity
+- Security-control changes
+- Persistence
+- Related endpoint/identity events
