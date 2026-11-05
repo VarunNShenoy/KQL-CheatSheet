@@ -157,3 +157,71 @@ DeviceRegistryEvents
 - PowerShell logging disabled
 - Changes made by something other than Group Policy or Intune
 
+### Obfuscated Files or Information (T1027)
+
+```kql
+DeviceProcessEvents
+| where Timestamp > ago(7d)
+| where FileName in~ (
+    "powershell.exe", "pwsh.exe",
+    "cmd.exe", "wscript.exe", "cscript.exe"
+)
+| where ProcessCommandLine matches regex
+    @"(?i)(\^|`|\bxor\b|%[a-z0-9_]+%)"
+| project Timestamp, DeviceName, AccountName,
+    FileName, ProcessCommandLine,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine
+| order by Timestamp desc
+```
+
+##### Note: This query may generate a high volume of results, including legitimate administrative activity such as Intune-managed PowerShell executions. Further refine the filtering criteria based on the initial results and validate the execution context to distinguish legitimate administrative activity from potentially malicious behavior. 
+
+### Clear Command History
+
+```kql
+DeviceProcessEvents
+| where Timestamp > ago(7d)
+| where ProcessCommandLine has_any (
+    "Clear-History",
+    "ConsoleHost_history.txt",
+    "PSReadLine"
+)
+| project Timestamp, DeviceName, AccountName,
+    FileName, ProcessCommandLine,
+    InitiatingProcessFileName
+| order by Timestamp desc
+```
+
+#### What to look for
+
+- Look for events attempting to clear powershell command history.
+
+### Disable Windows Event Logging (T1562.002)
+
+```kql
+DeviceProcessEvents
+| where Timestamp > ago(7d)
+| where
+    (FileName =~ "wevtutil.exe"
+     and ProcessCommandLine has "sl")
+    or
+    (FileName =~ "auditpol.exe"
+     and ProcessCommandLine has_any (
+        "/clear",
+        "/remove",
+        "/success:disable",
+        "/failure:disable"
+     ))
+| project Timestamp, DeviceName, AccountName,
+    FileName, ProcessCommandLine,
+    InitiatingProcessFileName
+| order by Timestamp desc
+```
+
+
+
+
+
+
+
