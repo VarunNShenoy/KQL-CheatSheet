@@ -1,6 +1,8 @@
 # Persistence related Querries
 
-## Objective
+## Objective 
+
+Investigate potential persistence mechanisms on endpoints to determine whether suspicious activity is designed to maintain access across system restarts, user logons, or application launches. Identify unauthorized changes to registry Run keys, Startup folders, scheduled tasks, Windows services, PowerShell profiles, WMI event subscriptions, local accounts, and other autostart mechanisms by analyzing process execution, file activity, registry modifications, and account changes. Correlate these activities with endpoint telemetry to distinguish legitimate administrative and software deployment activities from potentially malicious persistence.
 
 ### Registry Run Keys (T1547.001)
 
