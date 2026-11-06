@@ -131,7 +131,7 @@ DeviceProcessEvents
 - Unexpected initiating processes: Service creation performed by PowerShell, cmd.exe, unknown executables, or unexpected user accounts.
 - Persistence and execution: Investigate service startup configuration, especially automatic startup, privileged service accounts, and services executing suspicious binaries.
 
-### Persistent Local User Creation
+### Persistent Local User Creation (T1136.001)
 
 ```kql
 DeviceProcessEvents
@@ -146,6 +146,13 @@ DeviceProcessEvents
           ProcessCommandLine
 ```
 
+#### What to look for 
+
+- Unexpected account creation: Identify newly created local user accounts that are not part of approved administrative or onboarding activities.
+- Privileged account creation: Look for commands creating users and adding them to Administrators or other privileged groups.
+- Suspicious account names: Investigate unusual, misleading, or Windows-like usernames designed to resemble legitimate system accounts.
+- Unexpected initiating accounts: Check whether account creation was performed by standard users, compromised accounts, or unexpected administrative accounts.
+- Persistence and privilege escalation: Investigate whether newly created accounts are subsequently used for logons, privileged group membership changes, or suspicious remote access.
 
 
 
