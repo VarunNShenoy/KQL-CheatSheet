@@ -157,5 +157,50 @@ DeviceProcessEvents
 - Persistence and privilege escalation: Investigate whether newly created accounts are subsequently used for logons, privileged group membership changes, or suspicious remote access.
 
 
+### WMI Persistence - Identify Suspicious WMI Execution (T1546.003)
+
+```kql
+DeviceProcessEvents
+| where Timestamp > ago(30d)
+| where FileName in~ (
+    "powershell.exe",
+    "pwsh.exe",
+    "wmic.exe",
+    "wmiprvse.exe",
+    "scrcons.exe"
+)
+| where ProcessCommandLine has_any (
+    "Register-WmiEvent",
+    "root\\subscription",
+    "__EventFilter",
+    "CommandLineEventConsumer",
+    "ActiveScriptEventConsumer",
+    "__FilterToConsumerBinding"
+)
+| project Timestamp,
+          DeviceName,
+          FileName,
+          ProcessCommandLine,
+          AccountName,
+          InitiatingProcessFileName,
+          InitiatingProcessCommandLine,
+          InitiatingProcessParentFileName
+| order by Timestamp desc
+```
+
+#### What you are looking for
+
+- Was it PowerShell, an administrative utility, an installer, or an unknown executable?
+- Was the activity initiated by an administrator, SYSTEM, or a standard user?
+- Does it indicate WMI subscription creation or merely normal WMI queries?
+- Check the actual event filter, consumer, and binding.
+- Determine which executable or script the consumer references.
+- Check whether the referenced payload subsequently executed.
+- Investigate whether the resulting process communicated with suspicious external infrastructure.
+
+
+
+
+
 
 
