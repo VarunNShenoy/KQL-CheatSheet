@@ -59,3 +59,8 @@ SigninLogs
 - Look for five or more failures within 15 minutes.
 - Identify whether the same IP repeatedly targets a user.
 - Review whether multiple applications are involved.
+
+## Identify Users Experiencing Excessive MFA Failures
+
+```kql
+
